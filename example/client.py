@@ -8,13 +8,7 @@ import urllib2
 app = Flask(__name__)
 
 
-tracer = None
-
-
-@app.before_first_request
-def init_tracer():
-    global tracer
-    tracer = FlaskTracer(get_tracer('example client'), True, app, ["url_rule"])
+tracer = FlaskTracer(lambda: get_tracer('example client'))
 
 
 @app.route("/")
@@ -26,7 +20,7 @@ def index():
 
 
 @app.route("/request/<script>/<int:numrequests>")
-# @opentracing.tracer.trace("url")
+@tracer.trace("url")
 def send_multiple_requests(script, numrequests):
     '''
     Traced function that makes a request to the server
@@ -49,7 +43,7 @@ def send_multiple_requests(script, numrequests):
 
 
 @app.route('/log')
-# @opentracing.tracer.trace()
+@tracer.trace()
 def log_something():
     '''
     Traced function that logs something to the current
@@ -61,7 +55,7 @@ def log_something():
 
 
 @app.route("/test")
-# @opentracing.tracer.trace()
+@tracer.trace()
 def test_lightstep_tracer():
     '''
     Simple traced function to ensure the tracer works.

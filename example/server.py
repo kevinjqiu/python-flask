@@ -7,13 +7,7 @@ import opentracing
 app = Flask(__name__)
 
 
-tracer = None
-
-
-@app.before_first_request
-def init_tracer():
-    global tracer
-    tracer = FlaskTracer(get_tracer('example server'), True, app, ["url_rule"])
+tracer = FlaskTracer(lambda: get_tracer('example server'), True, app, ["url_rule"])
 
 
 @app.route("/simple")

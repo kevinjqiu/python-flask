@@ -1,16 +1,19 @@
 from flask import Flask
 from flask_opentracing import FlaskTracer
-import lightstep.tracer
+from .tracer import jaeger as get_tracer
 import opentracing
-import urllib2
+
 
 app = Flask(__name__)
 
 
-# one-time tracer initialization code
-ls_tracer = lightstep.tracer.init_tracer(group_name="example server", access_token="{your_lightstep_token}")
-# This tracer traces all requests
-tracer = FlaskTracer(ls_tracer, True, app, ["url_rule"])
+tracer = None
+
+
+@app.before_first_request
+def init_tracer():
+    global tracer
+    tracer = FlaskTracer(get_tracer('example server'), True, app, ["url_rule"])
 
 
 @app.route("/simple")

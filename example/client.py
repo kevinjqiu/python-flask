@@ -1,15 +1,20 @@
 from flask import Flask
 from flask_opentracing import FlaskTracer
-import lightstep.tracer
+from .tracer import jaeger as get_tracer
 import opentracing
 import urllib2
 
+
 app = Flask(__name__)
 
-# one-time tracer initialization code
-ls_tracer = lightstep.tracer.init_tracer(group_name="example client", access_token="{your_lightstep_token}")
-# this tracer does not trace all requests, so the @tracer.trace() decorator must be used
-tracer = FlaskTracer(ls_tracer)
+
+tracer = None
+
+
+@app.before_first_request
+def init_tracer():
+    global tracer
+    tracer = FlaskTracer(get_tracer('example client'), True, app, ["url_rule"])
 
 
 @app.route("/")
@@ -21,7 +26,7 @@ def index():
 
 
 @app.route("/request/<script>/<int:numrequests>")
-@tracer.trace("url")
+# @opentracing.tracer.trace("url")
 def send_multiple_requests(script, numrequests):
     '''
     Traced function that makes a request to the server
@@ -32,18 +37,19 @@ def send_multiple_requests(script, numrequests):
     def send_request():
         url = "http://localhost:5000/"+str(script)
         request = urllib2.Request(url)
-        inject_as_headers(ls_tracer, span, request)
+        inject_as_headers(tracer, span, request)
         try:
             response = urllib2.urlopen(request)
         except urllib2.URLError as ue:
             response = ue
+        print(response)
     for i in range(numrequests):
         send_request()
     return "Requests sent"
 
 
 @app.route('/log')
-@tracer.trace()
+# @opentracing.tracer.trace()
 def log_something():
     '''
     Traced function that logs something to the current
@@ -55,7 +61,7 @@ def log_something():
 
 
 @app.route("/test")
-@tracer.trace()
+# @opentracing.tracer.trace()
 def test_lightstep_tracer():
     '''
     Simple traced function to ensure the tracer works.
